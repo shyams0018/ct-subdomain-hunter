@@ -1,4 +1,4 @@
-import re
+import requests
 from typing import List, Dict
 
 CRT_SH_URL = "https.//crt.sh/"
