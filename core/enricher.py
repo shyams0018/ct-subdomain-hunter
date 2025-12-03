@@ -34,7 +34,7 @@ def fetch_http_metadata(subdomain: str) -> Dict:
     Falls back to HTTP if HTTPS fails.
     """
     def _get(url: str):
-        return requests.get(url, timeout=5, allow_redirects=True, verify=True)
+        return requests.get(url, timeout=2, allow_redirects=True, verify=True)
 
     urls_to_try = [f"https://{subdomain}", f"http://{subdomain}"]
     for url in urls_to_try:

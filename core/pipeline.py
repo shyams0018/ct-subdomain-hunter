@@ -6,6 +6,7 @@ from .enricher import resolve_ip, get_asn_info, fetch_http_metadata
 from .classifier import classify
 from .storage import init_db, create_scan, upsert_subdomain, insert_finding
 
+
 def run_scan(root_domain: str) -> List[Dict]:
     """
     Full scan pipeline:
@@ -16,14 +17,29 @@ def run_scan(root_domain: str) -> List[Dict]:
     scan_id = create_scan(root_domain)
 
     ct_data = fetch_ct_entries(root_domain)
+    print(f"[DEBUG] CT entries list length = {len(ct_data)}")
+
     raw_subs = extract_subdomains_from_ct(ct_data)
+    print(f"[DEBUG] Raw subdomain count = {len(raw_subs)}")
+
     subs = normalize_subdomains(raw_subs, root_domain)
+    print(f"[DEBUG] Normalized unique subdomains count = {len(subs)}")
+
+    # DEV: limit processing so it runs faster while building
+    MAX_SUBDOMAINS = 10
+    if len(subs) > MAX_SUBDOMAINS:
+        print(f"[DEBUG] Limiting to first {MAX_SUBDOMAINS} subdomains for this run.\n")
+        subs = subs[:MAX_SUBDOMAINS]
+    else:
+        print()
+
 
     results: List[Dict] = []
 
-    for sub in subs:
+    for idx, sub in enumerate(subs, start=1):
+        print(f"[DEBUG] [{idx}/{len(subs)}] Processing {sub}...")
         ip = resolve_ip(sub)
-        asn_info = get_asn_info(ip) if ip else None
+        asn_info = None
         http_meta = fetch_http_metadata(sub)
         risk = classify(sub, http_meta)
 
@@ -33,8 +49,8 @@ def run_scan(root_domain: str) -> List[Dict]:
             "root_domain": root_domain,
             "subdomain": sub,
             "ip": ip,
-            "asn": asn_info.get("asn") if asn_info else None,
-            "asn_description": asn_info.get("asn_description") if asn_info else None,
+            "asn": None,
+            "asn_description": None,
             "status_code": http_meta.get("status_code"),
             "title": http_meta.get("title"),
             "risk_tags": risk.get("risk_tags"),
